@@ -22,3 +22,18 @@ export function getSubMenusListUrl(menuId) {
   if (!base || !menuId) return '';
   return `${base}/menus/${String(menuId)}/sub-menus`;
 }
+
+/**
+ * Halaman daftar alat untuk satu sub menu (cocok untuk kode QR per baris).
+ * @param {string|number} subMenuId
+ * @param {string|number} [parentMenuId] — untuk query ?menuId= (tombol kembali saat buka dari pindai QR)
+ */
+export function getSubMenuItemsPageUrl(subMenuId, parentMenuId) {
+  const base = getAppBaseUrl();
+  if (!base || !subMenuId) return '';
+  const path = `${base}/sub-menus/${String(subMenuId)}/items`;
+  if (parentMenuId != null && String(parentMenuId) !== '') {
+    return `${path}?menuId=${encodeURIComponent(String(parentMenuId))}`;
+  }
+  return path;
+}

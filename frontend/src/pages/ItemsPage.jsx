@@ -15,8 +15,9 @@ export function ItemsPage() {
   const location = useLocation();
   const { actorName } = useApp();
   const sid = Number(subMenuId);
+  const searchMenuId = new URLSearchParams(location.search).get('menuId');
   const subMenuName = location.state?.subMenuName || 'Alat medis';
-  const menuId = location.state?.menuId;
+  const menuId = location.state?.menuId ?? (searchMenuId ? Number(searchMenuId) : undefined);
 
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
