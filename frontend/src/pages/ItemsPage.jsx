@@ -10,14 +10,24 @@ import { apiJson, endpoints } from '../utils/api.js';
 import { toastConfirm, toastError, toastSuccess } from '../utils/toast.jsx';
 
 export function ItemsPage() {
-  const { subMenuId } = useParams();
+  const params = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { actorName } = useApp();
-  const sid = Number(subMenuId);
+  const sid = Number(params.subMenuId) || 0;
   const searchMenuId = new URLSearchParams(location.search).get('menuId');
+  const menuIdParam = params.menuId;
+  const menuIdFromPath =
+    menuIdParam != null && menuIdParam !== '' ? Number(menuIdParam) : undefined;
   const subMenuName = location.state?.subMenuName || 'Alat medis';
-  const menuId = location.state?.menuId ?? (searchMenuId ? Number(searchMenuId) : undefined);
+  const menuId =
+    menuIdFromPath != null && !Number.isNaN(menuIdFromPath)
+      ? menuIdFromPath
+      : location.state?.menuId != null
+        ? Number(location.state.menuId)
+        : searchMenuId
+          ? Number(searchMenuId)
+          : undefined;
 
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);

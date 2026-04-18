@@ -165,7 +165,7 @@ export function SubMenusPage() {
                 type="button"
                 className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100"
                 onClick={() =>
-                  navigate(`/sub-menus/${s.id}/items`, { state: { subMenuName: s.name, menuId: mid } })
+                  navigate(`/menus/${mid}/sub-menus/${s.id}/items`, { state: { subMenuName: s.name, menuId: mid } })
                 }
               >
                 {s.image_url ? (
@@ -179,7 +179,7 @@ export function SubMenusPage() {
                   type="button"
                   className="text-left text-sm font-bold uppercase leading-snug text-slate-900 line-clamp-2"
                   onClick={() =>
-                    navigate(`/sub-menus/${s.id}/items`, { state: { subMenuName: s.name, menuId: mid } })
+                    navigate(`/menus/${mid}/sub-menus/${s.id}/items`, { state: { subMenuName: s.name, menuId: mid } })
                   }
                 >
                   {s.name}
@@ -211,7 +211,7 @@ export function SubMenusPage() {
                   className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
                   aria-label="Buka alat"
                   onClick={() =>
-                    navigate(`/sub-menus/${s.id}/items`, { state: { subMenuName: s.name, menuId: mid } })
+                    navigate(`/menus/${mid}/sub-menus/${s.id}/items`, { state: { subMenuName: s.name, menuId: mid } })
                   }
                 >
                   <Send className="h-4 w-4" />

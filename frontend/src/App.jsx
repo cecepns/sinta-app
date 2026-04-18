@@ -12,6 +12,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/menus" replace />} />
         <Route path="/menus" element={<MenusPage />} />
         <Route path="/menus/:menuId/sub-menus" element={<SubMenusPage />} />
+        <Route path="/menus/:menuId/sub-menus/:subMenuId/items" element={<ItemsPage />} />
         <Route path="/sub-menus/:subMenuId/items" element={<ItemsPage />} />
         <Route path="/activities" element={<ActivitiesPage />} />
         <Route path="*" element={<Navigate to="/menus" replace />} />
