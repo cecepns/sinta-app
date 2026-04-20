@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Pencil, QrCode, Send, Trash2 } from 'lucide-react';
+import { Camera, ImagePlus, Pencil, QrCode, Send, Trash2 } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { ActorModal } from '../components/ActorModal.jsx';
 import { PaginationBar } from '../components/PaginationBar.jsx';
@@ -29,6 +29,14 @@ export function SubMenusPage() {
   const [editing, setEditing] = useState(null);
   const [formName, setFormName] = useState('');
   const [formFile, setFormFile] = useState(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+
+  const resetImageInputs = () => {
+    setFormFile(null);
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
+  };
 
   useEffect(() => {
     if (!mid) return;
@@ -85,14 +93,14 @@ export function SubMenusPage() {
   const openCreate = () => {
     setEditing(null);
     setFormName('');
-    setFormFile(null);
+    resetImageInputs();
     setFormOpen(true);
   };
 
   const openEdit = (row) => {
     setEditing(row);
     setFormName(row.name);
-    setFormFile(null);
+    resetImageInputs();
     setFormOpen(true);
   };
 
@@ -233,8 +241,8 @@ export function SubMenusPage() {
       <ActorModal open={actorOpen} onClose={() => setActorOpen(false)} />
 
       {formOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center">
-          <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 shadow-xl">
             <h2 className="mb-3 text-lg font-semibold">{editing ? 'Ubah sub menu' : 'Sub menu baru'}</h2>
             <label className="mb-2 block text-sm font-medium text-slate-700">Nama</label>
             <input
@@ -243,16 +251,51 @@ export function SubMenusPage() {
               className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none ring-sinta-500 focus:ring-2"
             />
             <label className="mb-2 block text-sm font-medium text-slate-700">Gambar (opsional)</label>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => setFormFile(e.target.files?.[0] || null)}
-              className="mb-1 w-full text-sm"
-            />
-            <p className="mb-4 text-xs text-slate-500">Bisa ambil foto langsung dari kamera atau pilih dari galeri.</p>
+            <div className="mb-4 rounded-lg border border-slate-200 p-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  <Camera className="h-4 w-4" />
+                  Ambil dari kamera
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  onClick={() => galleryInputRef.current?.click()}
+                >
+                  <ImagePlus className="h-4 w-4" />
+                  Pilih dari galeri
+                </button>
+              </div>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => setFormFile(e.target.files?.[0] || null)}
+                className="sr-only"
+              />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFormFile(e.target.files?.[0] || null)}
+                className="sr-only"
+              />
+              <p className="mt-2 text-xs text-slate-500">{formFile ? `File dipilih: ${formFile.name}` : 'Belum ada file dipilih.'}</p>
+            </div>
             <div className="flex justify-end gap-2">
-              <button type="button" className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100" onClick={() => setFormOpen(false)}>
+              <button
+                type="button"
+                className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
+                onClick={() => {
+                  setFormOpen(false);
+                  resetImageInputs();
+                }}
+              >
                 Batal
               </button>
               <button type="button" className="rounded-lg bg-sinta-600 px-4 py-2 text-sm font-medium text-white hover:bg-sinta-700" onClick={submitForm}>
