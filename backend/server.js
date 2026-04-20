@@ -3,6 +3,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const mysqlCore = require('mysql2');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
@@ -68,6 +69,69 @@ function searchClause(search, column) {
   return { sql: ` AND ${column} LIKE ? `, params: [`%${String(search).trim()}%`] };
 }
 
+function toSqlDateTime(value) {
+  return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function sqlValue(value) {
+  if (value === null || value === undefined) return 'NULL';
+  if (value instanceof Date) return mysqlCore.escape(toSqlDateTime(value));
+  if (Buffer.isBuffer(value)) return `X'${value.toString('hex')}'`;
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'NULL';
+  if (typeof value === 'boolean') return value ? '1' : '0';
+  if (typeof value === 'object') return mysqlCore.escape(JSON.stringify(value));
+  return mysqlCore.escape(String(value));
+}
+
+async function buildDatabaseDump() {
+  const conn = await pool.getConnection();
+  try {
+    const tables = ['menus', 'sub_menus', 'inventory_items', 'activities'];
+    const lines = [
+      '-- SINTA inventory database backup',
+      `-- Generated at ${new Date().toISOString()}`,
+      '',
+      'SET NAMES utf8mb4;',
+      'SET FOREIGN_KEY_CHECKS=0;',
+      'START TRANSACTION;',
+      '',
+    ];
+
+    for (const table of tables) {
+      const [[createResult]] = await conn.query(`SHOW CREATE TABLE \`${table}\``);
+      const createSql = createResult?.['Create Table'];
+      if (!createSql) continue;
+      lines.push(`-- Table structure for \`${table}\``);
+      lines.push(`DROP TABLE IF EXISTS \`${table}\`;`);
+      lines.push(`${createSql};`);
+      lines.push('');
+    }
+
+    for (const table of tables) {
+      const [rows] = await conn.query(`SELECT * FROM \`${table}\``);
+      lines.push(`-- Data for \`${table}\``);
+      if (!rows.length) {
+        lines.push(`-- No rows in \`${table}\``);
+        lines.push('');
+        continue;
+      }
+      const columns = Object.keys(rows[0]);
+      const colList = columns.map((c) => `\`${c}\``).join(', ');
+      const valueRows = rows.map((row) => `(${columns.map((c) => sqlValue(row[c])).join(', ')})`);
+      lines.push(`INSERT INTO \`${table}\` (${colList}) VALUES`);
+      lines.push(`${valueRows.join(',\n')};`);
+      lines.push('');
+    }
+
+    lines.push('COMMIT;');
+    lines.push('SET FOREIGN_KEY_CHECKS=1;');
+    lines.push('');
+    return lines.join('\n');
+  } finally {
+    conn.release();
+  }
+}
+
 async function logActivity(conn, { actor_name, action, entity_type, entity_id, summary }) {
   const actor = String(actor_name || '').trim() || 'Anonim';
   await conn.execute(
@@ -82,6 +146,18 @@ app.get('/api/health', async (_req, res) => {
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/api/database/download', async (_req, res) => {
+  try {
+    const dump = await buildDatabaseDump();
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    res.setHeader('Content-Type', 'application/sql; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="sinta-inventory-backup-${stamp}.sql"`);
+    res.send(dump);
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Gagal membuat backup database' });
   }
 });
 

@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { ActorModal } from '../components/ActorModal.jsx';
 import { PaginationBar } from '../components/PaginationBar.jsx';
-import { apiJson, endpoints } from '../utils/api.js';
-import { toastError } from '../utils/toast.jsx';
+import { apiJson, downloadDatabaseBackup, endpoints } from '../utils/api.js';
+import { toastError, toastSuccess } from '../utils/toast.jsx';
 
 const actionLabel = {
   create: 'Menambah',
@@ -28,6 +28,7 @@ export function ActivitiesPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [actorOpen, setActorOpen] = useState(false);
+  const [downloadingDb, setDownloadingDb] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,6 +47,18 @@ export function ActivitiesPage() {
     load();
   }, [load]);
 
+  const handleDownloadDatabase = async () => {
+    setDownloadingDb(true);
+    try {
+      await downloadDatabaseBackup();
+      toastSuccess('Backup database berhasil diunduh.');
+    } catch (e) {
+      toastError(e.message || 'Gagal mengunduh backup database');
+    } finally {
+      setDownloadingDb(false);
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -60,6 +73,8 @@ export function ActivitiesPage() {
           setSearch(searchInput.trim());
         }}
         onRefresh={load}
+        onDownloadDatabase={handleDownloadDatabase}
+        downloadingDatabase={downloadingDb}
         onOpenActor={() => setActorOpen(true)}
       />
 

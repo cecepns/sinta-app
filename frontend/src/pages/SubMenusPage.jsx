@@ -243,7 +243,14 @@ export function SubMenusPage() {
               className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none ring-sinta-500 focus:ring-2"
             />
             <label className="mb-2 block text-sm font-medium text-slate-700">Gambar (opsional)</label>
-            <input type="file" accept="image/*" onChange={(e) => setFormFile(e.target.files?.[0] || null)} className="mb-4 w-full text-sm" />
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => setFormFile(e.target.files?.[0] || null)}
+              className="mb-1 w-full text-sm"
+            />
+            <p className="mb-4 text-xs text-slate-500">Bisa ambil foto langsung dari kamera atau pilih dari galeri.</p>
             <div className="flex justify-end gap-2">
               <button type="button" className="rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100" onClick={() => setFormOpen(false)}>
                 Batal

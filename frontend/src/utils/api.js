@@ -35,6 +35,7 @@ export function mediaUrl(relativePath) {
 
 export const endpoints = {
   health: () => '/api/health',
+  databaseDownload: '/api/database/download',
   menus: (query = {}) => `/api/menus${buildQuery(query)}`,
   menusCollection: '/api/menus',
   menu: (id) => `/api/menus/${id}`,
@@ -77,4 +78,32 @@ export async function apiForm(path, formData, method = 'POST') {
   const { ok, data } = await parseResponse(res);
   if (!ok) throw new Error(data?.error || `HTTP ${res.status}`);
   return data;
+}
+
+export async function downloadDatabaseBackup() {
+  const res = await fetch(apiUrl(endpoints.databaseDownload));
+  if (!res.ok) {
+    const text = await res.text();
+    let message = `HTTP ${res.status}`;
+    try {
+      const parsed = text ? JSON.parse(text) : null;
+      if (parsed?.error) message = parsed.error;
+    } catch {
+      if (text) message = text;
+    }
+    throw new Error(message);
+  }
+
+  const blob = await res.blob();
+  const header = res.headers.get('content-disposition') || '';
+  const filenameMatch = header.match(/filename="?([^"]+)"?/i);
+  const filename = filenameMatch?.[1] || `sinta-inventory-backup-${Date.now()}.sql`;
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = href;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(href);
 }

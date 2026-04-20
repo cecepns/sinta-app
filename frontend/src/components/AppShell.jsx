@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { BottomNav } from './BottomNav.jsx';
 import { DesktopNav } from './DesktopNav.jsx';
+import bgImage from '../assets/bg.jpeg';
 
 export function AppShell() {
   return (
@@ -11,9 +12,16 @@ export function AppShell() {
           <span className="text-base font-bold tracking-tight text-sinta-700">SINTA</span>
         </div>
       </header>
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-3 pb-24 pt-2 md:max-w-5xl md:pb-6">
-        <Outlet />
-      </div>
+      <main className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-hidden px-3 pb-24 pt-2 md:max-w-5xl md:pb-6">
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${bgImage})`, opacity: 0.15 }}
+          aria-hidden="true"
+        />
+        <div className="relative z-10">
+          <Outlet />
+        </div>
+      </main>
       <BottomNav />
     </div>
   );
