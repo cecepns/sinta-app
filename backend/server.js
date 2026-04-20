@@ -390,12 +390,12 @@ app.get('/api/sub-menus/:subMenuId/items', async (req, res) => {
     );
     const total = Number(t);
     const [rows] = await pool.query(
-      `SELECT i.id, i.sub_menu_id, i.name, i.quantity, i.created_at, i.updated_at
+      `SELECT i.id, i.sub_menu_id, i.name, i.quantity, i.image_path, i.created_at, i.updated_at
        FROM inventory_items i WHERE i.sub_menu_id=? ${sSql} ORDER BY i.id DESC LIMIT ? OFFSET ?`,
       [subMenuId, ...sParams, limit, offset]
     );
     res.json({
-      data: rows,
+      data: rows.map((r) => ({ ...r, image_url: publicImageUrl(r.image_path) })),
       page,
       limit,
       total,
@@ -406,7 +406,7 @@ app.get('/api/sub-menus/:subMenuId/items', async (req, res) => {
   }
 });
 
-app.post('/api/sub-menus/:subMenuId/items', async (req, res) => {
+app.post('/api/sub-menus/:subMenuId/items', upload.single('image'), async (req, res) => {
   const conn = await pool.getConnection();
   try {
     const subMenuId = parseInt(req.params.subMenuId, 10);
@@ -416,7 +416,13 @@ app.post('/api/sub-menus/:subMenuId/items', async (req, res) => {
     if (!subMenuId || !name) return res.status(400).json({ error: 'Sub menu dan nama alat wajib' });
     const [[s]] = await conn.query(`SELECT id FROM sub_menus WHERE id=?`, [subMenuId]);
     if (!s) return res.status(404).json({ error: 'Sub menu tidak ditemukan' });
-    const [r] = await conn.execute(`INSERT INTO inventory_items (sub_menu_id, name, quantity) VALUES (?,?,?)`, [subMenuId, name, quantity]);
+    const image_path = req.file ? storedImageRel(req.file.filename) : null;
+    const [r] = await conn.execute(`INSERT INTO inventory_items (sub_menu_id, name, quantity, image_path) VALUES (?,?,?,?)`, [
+      subMenuId,
+      name,
+      quantity,
+      image_path,
+    ]);
     const id = r.insertId;
     await logActivity(conn, {
       actor_name,
@@ -425,7 +431,7 @@ app.post('/api/sub-menus/:subMenuId/items', async (req, res) => {
       entity_id: id,
       summary: `Menambah alat "${name}" (qty ${quantity}) pada sub menu #${subMenuId}`,
     });
-    res.status(201).json({ id, sub_menu_id: subMenuId, name, quantity });
+    res.status(201).json({ id, sub_menu_id: subMenuId, name, quantity, image_path, image_url: publicImageUrl(image_path) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   } finally {
@@ -433,7 +439,7 @@ app.post('/api/sub-menus/:subMenuId/items', async (req, res) => {
   }
 });
 
-app.put('/api/items/:id', async (req, res) => {
+app.put('/api/items/:id', upload.single('image'), async (req, res) => {
   const conn = await pool.getConnection();
   try {
     const id = parseInt(req.params.id, 10);
@@ -441,9 +447,14 @@ app.put('/api/items/:id', async (req, res) => {
     const quantity = Math.max(0, parseInt(String(req.body.quantity ?? '0'), 10) || 0);
     const actor_name = req.body.actor_name;
     if (!id || !name) return res.status(400).json({ error: 'ID dan nama wajib' });
-    const [[existing]] = await conn.query(`SELECT id FROM inventory_items WHERE id=?`, [id]);
+    const [[existing]] = await conn.query(`SELECT id, image_path FROM inventory_items WHERE id=?`, [id]);
     if (!existing) return res.status(404).json({ error: 'Alat tidak ditemukan' });
-    await conn.execute(`UPDATE inventory_items SET name=?, quantity=? WHERE id=?`, [name, quantity, id]);
+    let image_path = existing.image_path;
+    if (req.file) {
+      if (existing.image_path) fs.unlink(path.join(__dirname, existing.image_path), () => {});
+      image_path = storedImageRel(req.file.filename);
+    }
+    await conn.execute(`UPDATE inventory_items SET name=?, quantity=?, image_path=? WHERE id=?`, [name, quantity, image_path, id]);
     await logActivity(conn, {
       actor_name,
       action: 'update',
@@ -451,7 +462,7 @@ app.put('/api/items/:id', async (req, res) => {
       entity_id: id,
       summary: `Mengubah alat #${id}: ${name} (qty ${quantity})`,
     });
-    res.json({ id, name, quantity });
+    res.json({ id, name, quantity, image_path, image_url: publicImageUrl(image_path) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   } finally {
@@ -465,9 +476,10 @@ app.delete('/api/items/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10);
     const actor_name = req.body?.actor_name ?? req.query.actor_name;
     if (!id) return res.status(400).json({ error: 'ID tidak valid' });
-    const [[row]] = await conn.query(`SELECT name FROM inventory_items WHERE id=?`, [id]);
+    const [[row]] = await conn.query(`SELECT name, image_path FROM inventory_items WHERE id=?`, [id]);
     if (!row) return res.status(404).json({ error: 'Alat tidak ditemukan' });
     await conn.execute(`DELETE FROM inventory_items WHERE id=?`, [id]);
+    if (row.image_path) fs.unlink(path.join(__dirname, row.image_path), () => {});
     await logActivity(conn, {
       actor_name,
       action: 'delete',
